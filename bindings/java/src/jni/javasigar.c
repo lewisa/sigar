@@ -83,6 +83,8 @@ typedef struct {
     sigar = jsigar->sigar; \
     jsigar->env = env
 
+int mycheck3;
+
 JNIEXPORT jint JNICALL
 JNI_OnLoad(JavaVM *vm, void *reserved)
 {
@@ -187,12 +189,17 @@ static void *sigar_get_pointer(JNIEnv *env, jobject obj) {
     jfieldID pointer_field;
     jclass cls = JENV->GetObjectClass(env, obj);
 
+//#if 1
 #ifdef SIGAR_POINTER_LONG
     pointer_field = JENV->GetFieldID(env, cls, "longSigarWrapper", "J");
     return (void *)JENV->GetLongField(env, obj, pointer_field);
+#pragma message ( "Using SIGAR_POINTER_LONG" )
+//#warning "Using SIGAR_POINTER_LONG"
 #else
     pointer_field = JENV->GetFieldID(env, cls, "sigarWrapper", "I");
     return (void *)JENV->GetIntField(env, obj, pointer_field);
+#pragma message ( "NOT Using SIGAR_POINTER_LONG" )
+//#warning "NOT Using SIGAR_POINTER_LONG"
 #endif
 }
 
@@ -901,7 +908,8 @@ JNIEXPORT jstring SIGAR_JNI(NetFlags_getIfFlagsString)
 JNIEXPORT jstring SIGAR_JNI(NetFlags_getScopeString)
 (JNIEnv *env, jclass cls, jint scope)
 {
-    const char *buf = sigar_net_scope_to_string(scope);
+    char buf[24];
+    sigar_net_scope_to_string(scope, buf);
     return JENV->NewStringUTF(env, buf);
 }
 
@@ -1054,18 +1062,18 @@ JNIEXPORT jstring SIGAR_JNIx(getNetServicesName)
 JNIEXPORT jstring SIGAR_JNI(NetConnection_getTypeString)
 (JNIEnv *env, jobject obj)
 {
+	char buf[24];
     jclass cls = JENV->GetObjectClass(env, obj);
     jfieldID field = JENV->GetFieldID(env, cls, "type", "I");
     jint type = JENV->GetIntField(env, obj, field);
-    return JENV->NewStringUTF(env,
-                              sigar_net_connection_type_get(type));
+    return JENV->NewStringUTF(env, sigar_net_connection_type_get(type, buf));
 }
 
 JNIEXPORT jstring SIGAR_JNI(NetConnection_getStateString)
 (JNIEnv *env, jobject cls, jint state)
 {
-    return JENV->NewStringUTF(env,
-                              sigar_net_connection_state_get(state));
+	char buf[24];
+    return JENV->NewStringUTF(env, sigar_net_connection_state_get(state, buf));
 }
 
 JNIEXPORT jobjectArray SIGAR_JNIx(getArpList)
@@ -1213,20 +1221,33 @@ JNIEXPORT jobjectArray SIGAR_JNIx(getNetInterfaceList)
     unsigned int i;
     sigar_net_interface_list_t iflist;
     jobjectArray ifarray;
-    jclass stringclass = JENV->FindClass(env, "java/lang/String");
+	jclass stringclass = NULL;
     dSIGAR(NULL);
+
+	mycheck3 = 4;
+    stringclass = JENV->FindClass(env, "java/lang/String");
+	mycheck3 = 5;
+	mycheck3 = 6;
 
     if ((status = sigar_net_interface_list_get(sigar, &iflist)) != SIGAR_OK) {
         sigar_throw_error(env, jsigar, status);
         return NULL;
     }
+	mycheck3 = 7;
 
     ifarray = JENV->NewObjectArray(env, iflist.number, stringclass, 0);
     SIGAR_CHEX;
+	mycheck3 = 8;
 
     for (i=0; i<iflist.number; i++) {
         jstring s = JENV->NewStringUTF(env, iflist.data[i]);
+		if (s == NULL) {
+			int i = 0;
+		}
         JENV->SetObjectArrayElement(env, ifarray, i, s);
+		if (JENV->ExceptionCheck(env)) {
+			int i = 0;
+		}
         SIGAR_CHEX;
     }
 

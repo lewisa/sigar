@@ -144,6 +144,8 @@ sigar_uint64_t sigar_FileTimeToTime(FILETIME *ft)
     time -= EPOCH_DELTA;
     return time;
 }
+int mycheck4;
+int mycheck5;
 
 static DWORD perfbuf_init(sigar_t *sigar)
 {
@@ -165,29 +167,31 @@ static DWORD perfbuf_grow(sigar_t *sigar)
     return sigar->perfbuf_size;
 }
 
-static char *get_counter_name(char *key)
+static char *get_counter_name(char *key, char *buf)
 {
     if (strEQ(key, PERF_TITLE_MEM_KEY)) {
-        return "Memory";
+        strcpy(buf, "Memory");
     }
     else if (strEQ(key, PERF_TITLE_PROC_KEY)) {
-        return "Process";
+        strcpy(buf, "Process");
     }
     else if (strEQ(key, PERF_TITLE_CPU_KEY)) {
-        return "Processor";
+        strcpy(buf, "Processor");
     }
     else if (strEQ(key, PERF_TITLE_DISK_KEY)) {
-        return "LogicalDisk";
+        strcpy(buf, "LogicalDisk");
     }
     else {
         return key;
     }
+	return buf;
 }
 
 static PERF_OBJECT_TYPE *get_perf_object_inst(sigar_t *sigar,
                                               char *counter_key,
                                               DWORD inst, DWORD *err)
 {
+	char buf[20];
     DWORD retval, type, bytes;
     WCHAR wcounter_key[MAX_PATH+1];
     PERF_DATA_BLOCK *block;
@@ -213,7 +217,7 @@ static PERF_OBJECT_TYPE *get_perf_object_inst(sigar_t *sigar,
 
     block = (PERF_DATA_BLOCK *)sigar->perfbuf;
     if (block->NumObjectTypes == 0) {
-        counter_key = get_counter_name(counter_key);
+        counter_key = get_counter_name(counter_key, buf);
         sigar_strerror_printf(sigar, "No %s counters defined (disabled?)",
                               counter_key);
         *err = -1;
@@ -651,11 +655,13 @@ int sigar_os_close(sigar_t *sigar)
     return retval;
 }
 
-char *sigar_os_error_string(sigar_t *sigar, int err)
+char *sigar_os_error_string(sigar_t *sigar, int err, char *buf)
 {
+	*buf = '\0';
     switch (err) {
       case SIGAR_NO_SUCH_PROCESS:
-        return "No such process";
+        strcpy(buf, "No such process");
+		return buf;
         break;
     }
     return NULL;
@@ -2041,6 +2047,12 @@ SIGAR_DECLARE(int) sigar_disk_usage_get(sigar_t *sigar,
         PERF_COUNTER_BLOCK *counter_block = PdhGetCounterBlock(inst);
         wchar_t *name = (wchar_t *)((BYTE *)inst + inst->NameOffset);
 
+		if (IsBadStringPtr(name, 100)) {
+			float f = 0;
+			float l = 2.0/f;
+			return SIGAR_EACCES;
+		}
+
         SIGAR_W2A(name, drive, sizeof(drive));
 
         if (sigar_isdigit(*name)) {
@@ -2105,7 +2117,7 @@ sigar_file_system_usage_get(sigar_t *sigar,
 
     status = sigar_disk_usage_get(sigar, dirname, &fsusage->disk);
 
-    return SIGAR_OK;
+    return status;
 }
 
 static int sigar_cpu_info_get(sigar_t *sigar, sigar_cpu_info_t *info)
@@ -2651,14 +2663,13 @@ static int sigar_get_if_table(sigar_t *sigar, PMIB_IFTABLE *iftable)
         return SIGAR_OK;
     }
 }
-
 static int get_mib_ifrow(sigar_t *sigar,
                          const char *name,
                          MIB_IFROW **ifrp)
 {
     int status, key, cached=0;
     sigar_cache_entry_t *entry;
-
+	mycheck4 = 3;
     if (sigar->netif_mib_rows) {
         cached = 1;
     }
@@ -2668,8 +2679,11 @@ static int get_mib_ifrow(sigar_t *sigar,
             return status;
         }
     }
+	mycheck4 = 4;
     key = netif_hash(name);
+	mycheck4 = 5;
     entry = sigar_cache_get(sigar->netif_mib_rows, key);
+	mycheck4 = 6;
     if (!entry->value) {
         return ENOENT;
     }
@@ -2681,7 +2695,7 @@ static int get_mib_ifrow(sigar_t *sigar,
             return status;
         }
     }
-
+	mycheck4 = 9;
     return SIGAR_OK;
 }
 
@@ -2965,11 +2979,12 @@ sigar_net_interface_stat_get(sigar_t *sigar, const char *name,
 {
     MIB_IFROW *ifr;
     int status;
-
+	mycheck5 = 2;
     status = get_mib_ifrow(sigar, name, &ifr);
     if (status != SIGAR_OK) {
         return status;
     }
+	mycheck5 = 3;
     
     ifstat->rx_bytes    = ifr->dwInOctets;
     ifstat->rx_packets  = ifr->dwInUcastPkts + ifr->dwInNUcastPkts; 
@@ -2987,6 +3002,7 @@ sigar_net_interface_stat_get(sigar_t *sigar, const char *name,
     ifstat->tx_carrier    = SIGAR_FIELD_NOTIMPL;
 
     ifstat->speed         = ifr->dwSpeed;
+	mycheck5 = 4;
 
     return SIGAR_OK;
 }

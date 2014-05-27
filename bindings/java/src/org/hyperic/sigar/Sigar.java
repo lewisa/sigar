@@ -120,6 +120,10 @@ public class Sigar implements SigarProxy {
         NATIVE_BUILD_DATE = nativeBuildDate;
         NATIVE_SCM_REVISION = nativeScmRevision;
     }
+    public static void main(String args[]) {
+      //FileSystemUsage fsu = sigar.getFileSystemUsage("C:\\");
+      //fsu.gather("C:\\");
+    }
 
     private static void checkVersion(String nativeVersionString)
         throws SigarException {
