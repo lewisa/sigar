@@ -38,35 +38,36 @@ extern "C" {
  * FORMAT_MESSAGE_FROM_HMODULE.  We only define the error
  * codes that could be possibly returned.
  */
-static char *get_error_message(PDH_STATUS status) {
+static char *get_error_message(PDH_STATUS status, char *buf) {
     switch (status) {
     case PDH_CSTATUS_NO_MACHINE:
-        return "The computer is unavailable";
+        strcpy(buf, "The computer is unavailable");
     case PDH_CSTATUS_NO_OBJECT:
-        return "The specified object could not be found on the computer";
+        strcpy(buf, "The specified object could not be found on the computer");
     case PDH_INVALID_ARGUMENT:
-        return "A required argument is invalid";
+        strcpy(buf, "A required argument is invalid");
     case PDH_MEMORY_ALLOCATION_FAILURE:
-        return "A required temporary buffer could not be allocated";
+        strcpy(buf, "A required temporary buffer could not be allocated");
     case PDH_INVALID_HANDLE:
-        return "The query handle is not valid";
+        strcpy(buf, "The query handle is not valid");
     case PDH_NO_DATA:
-        return "The query does not currently have any counters";
+        strcpy(buf, "The query does not currently have any counters");
     case PDH_CSTATUS_BAD_COUNTERNAME:
-        return "The counter name path string could not be parsed or "
-            "interpreted";
+        strcpy(buf, "The counter name path string could not be parsed or "
+            "interpreted");
     case PDH_CSTATUS_NO_COUNTER:
-        return "The specified counter was not found";
+        strcpy(buf, "The specified counter was not found");
     case PDH_CSTATUS_NO_COUNTERNAME:
-        return "An empty counter name path string was passed in";
+        strcpy(buf, "An empty counter name path string was passed in");
     case PDH_FUNCTION_NOT_FOUND:
-        return "The calculation function for this counter could not "
-            "be determined";
+        strcpy(buf, "The calculation function for this counter could not "
+            "be determined");
     case PDH_ACCESS_DENIED:
-        return "Access denied";
+        strcpy(buf, "Access denied");
     default:
-        return "Unknown error";
+        strcpy(buf, "Unknown error");
     }
+	return buf;
 }
 
 JNIEXPORT jint SIGAR_JNI(win32_Pdh_validate)
@@ -94,7 +95,8 @@ JNIEXPORT void SIGAR_JNI(win32_Pdh_pdhConnectMachine)
     JENV->ReleaseStringChars(env, jhost, host);
 
     if (status != ERROR_SUCCESS) {
-        win32_throw_exception(env, get_error_message(status));
+		char buf[100];
+        win32_throw_exception(env, get_error_message(status, buf));
     }
 }
 
@@ -106,7 +108,8 @@ JNIEXPORT jlong JNICALL SIGAR_JNI(win32_Pdh_pdhOpenQuery)
 
     status = PdhOpenQuery(NULL, 0, &h_query);
     if (status != ERROR_SUCCESS) {
-        win32_throw_exception(env, get_error_message(status));
+		char buf[100];
+        win32_throw_exception(env, get_error_message(status, buf));
         return 0;
     }
     return (jlong)h_query;
@@ -122,7 +125,8 @@ JNIEXPORT void SIGAR_JNI(win32_Pdh_pdhCloseQuery)
     status = PdhCloseQuery(h_query);
 
     if (status != ERROR_SUCCESS) {
-        win32_throw_exception(env, get_error_message(status));
+		char buf[100];
+        win32_throw_exception(env, get_error_message(status, buf));
         return;
     }
 }
@@ -151,7 +155,8 @@ JNIEXPORT jlong SIGAR_JNI(win32_Pdh_pdhAddCounter)
     JENV->ReleaseStringChars(env, cp, counter_path);
 
     if (status != ERROR_SUCCESS) {
-        win32_throw_exception(env, get_error_message(status));
+		char buf[100];
+        win32_throw_exception(env, get_error_message(status, buf));
         return 0;
     }
 
@@ -167,9 +172,39 @@ JNIEXPORT void SIGAR_JNI(win32_Pdh_pdhRemoveCounter)
     status = PdhRemoveCounter(h_counter);
 
     if (status != ERROR_SUCCESS) {
-        win32_throw_exception(env, get_error_message(status));
+		char buf[100];
+        win32_throw_exception(env, get_error_message(status, buf));
         return;
     }
+}
+
+JNIEXPORT void SIGAR_JNI(win32_Pdh_pdhCollectQueryDataOverSecond) 
+(JNIEnv *env, jclass cur, jlong query)
+{
+   HQUERY                h_query        = (HQUERY)query;
+   PdhCollectQueryData(h_query);
+   Sleep(1000);
+   PdhCollectQueryData(h_query);
+}
+
+
+JNIEXPORT jdouble SIGAR_JNI(win32_Pdh_pdhGetFormattedValue)
+(JNIEnv *env, jclass cur, jlong counter)
+{
+    HCOUNTER              h_counter      = (HCOUNTER)counter;
+    PDH_STATUS            status;
+    PDH_FMT_COUNTERVALUE fmt_value; 
+    status = PdhGetFormattedCounterValue(h_counter,
+                                         PDH_FMT_DOUBLE,
+                                         (LPDWORD)NULL,
+                                         &fmt_value);
+    if (status != ERROR_SUCCESS) {
+		char buff[100];
+        win32_throw_exception(env, get_error_message(status, buff));
+        return 0;
+    }
+
+    return fmt_value.doubleValue;
 }
 
 JNIEXPORT jdouble SIGAR_JNI(win32_Pdh_pdhGetValue)
@@ -185,7 +220,8 @@ JNIEXPORT jdouble SIGAR_JNI(win32_Pdh_pdhGetValue)
     status = PdhCollectQueryData(h_query);
    
     if (status != ERROR_SUCCESS) {
-        win32_throw_exception(env, get_error_message(status));
+		char buf[100];
+        win32_throw_exception(env, get_error_message(status, buf));
         return 0;
     }
 
@@ -209,7 +245,8 @@ JNIEXPORT jdouble SIGAR_JNI(win32_Pdh_pdhGetValue)
     }
 
     if (status != ERROR_SUCCESS) {
-        win32_throw_exception(env, get_error_message(status));
+		char buf[100];
+        win32_throw_exception(env, get_error_message(status, buf));
         return 0;
     }
 
@@ -232,7 +269,8 @@ JNIEXPORT jstring SIGAR_JNI(win32_Pdh_pdhGetDescription)
 
     status = PdhGetCounterInfo(h_counter, TRUE, &size, NULL);
     if (status != PDH_MORE_DATA) {
-        win32_throw_exception(env, get_error_message(status));
+		char buf[100];
+        win32_throw_exception(env, get_error_message(status, buf));
         return NULL;
     }
 
@@ -246,7 +284,8 @@ JNIEXPORT jstring SIGAR_JNI(win32_Pdh_pdhGetDescription)
         }
     }
     else {
-        win32_throw_exception(env, get_error_message(status));
+		char buf[100];
+        win32_throw_exception(env, get_error_message(status, buf));
     }
 
     free(info);
@@ -263,7 +302,8 @@ JNIEXPORT jlong SIGAR_JNI(win32_Pdh_pdhGetCounterType)
 
     status = PdhGetCounterInfo(h_counter, FALSE, &size, &info);
     if (status != ERROR_SUCCESS) {
-        win32_throw_exception(env, get_error_message(status));
+		char buf[100];
+        win32_throw_exception(env, get_error_message(status, buf));
         return -1;
     }
 
@@ -273,6 +313,7 @@ JNIEXPORT jlong SIGAR_JNI(win32_Pdh_pdhGetCounterType)
 JNIEXPORT jobjectArray SIGAR_JNI(win32_Pdh_pdhGetInstances)
 (JNIEnv *env, jclass cur, jstring cp)
 {
+	char buf[100];
     PDH_STATUS   status              = ERROR_SUCCESS;
     DWORD        counter_list_size   = 0;
     DWORD        instance_list_size  = 8096;
@@ -343,7 +384,7 @@ JNIEXPORT jobjectArray SIGAR_JNI(win32_Pdh_pdhGetInstances)
             free(instance_list_buf);
         
         // An error occured
-        win32_throw_exception(env, get_error_message(status));
+        win32_throw_exception(env, get_error_message(status, buf));
         return NULL;
     }
 
@@ -353,9 +394,11 @@ JNIEXPORT jobjectArray SIGAR_JNI(win32_Pdh_pdhGetInstances)
     return array;
 }
 
+
 JNIEXPORT jobjectArray SIGAR_JNI(win32_Pdh_pdhGetKeys)
 (JNIEnv *env, jclass cur, jstring cp)
 {
+	char buf[100];
     PDH_STATUS  status              = ERROR_SUCCESS;
     DWORD       counter_list_size   = 8096;
     DWORD       instance_list_size  = 0;
@@ -424,7 +467,7 @@ JNIEXPORT jobjectArray SIGAR_JNI(win32_Pdh_pdhGetKeys)
             free(instance_list_buf);
         
         // An error occured
-        win32_throw_exception(env, get_error_message(status));
+        win32_throw_exception(env, get_error_message(status, buf));
         return NULL;
     }
     
@@ -437,6 +480,7 @@ JNIEXPORT jobjectArray SIGAR_JNI(win32_Pdh_pdhGetKeys)
 JNIEXPORT jobjectArray SIGAR_JNI(win32_Pdh_pdhGetObjects)
 (JNIEnv *env, jclass cur)
 {
+	char buf[100];
     PDH_STATUS   status;
     DWORD        list_size       = 8096;
     LPTSTR       list_buf        = (LPTSTR)malloc(list_size * sizeof(TCHAR));
@@ -460,8 +504,7 @@ JNIEXPORT jobjectArray SIGAR_JNI(win32_Pdh_pdhGetObjects)
     if (status != ERROR_SUCCESS) {
         if (list_buf != NULL)
             free(list_buf);
-
-        win32_throw_exception(env, get_error_message(status));
+        win32_throw_exception(env, get_error_message(status, buf));
         return NULL;
     }
 
@@ -512,7 +555,8 @@ JNIEXPORT jstring SIGAR_JNI(win32_Pdh_pdhLookupPerfName)
         return JENV->NewString(env, (const jchar *)path, len);
     }
     else {
-        win32_throw_exception(env, get_error_message(status));
+		char buf[100];
+        win32_throw_exception(env, get_error_message(status, buf));
         return NULL;
     }
 }
@@ -532,7 +576,8 @@ JNIEXPORT jint SIGAR_JNI(win32_Pdh_pdhLookupPerfIndex)
         return index;
     }
     else {
-        win32_throw_exception(env, get_error_message(status));
+		char buf[100];
+        win32_throw_exception(env, get_error_message(status, buf));
         return -1;
     }
 }

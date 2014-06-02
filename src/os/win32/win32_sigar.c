@@ -131,6 +131,13 @@ typedef enum {
 #define MS_LOOPBACK_ADAPTER "Microsoft Loopback Adapter"
 #define NETIF_LA "la"
 
+static PERF_DATA_BLOCK *marker;
+static PERF_DATA_BLOCK *staticBlock;
+static PERF_OBJECT_TYPE *staticObject;
+static PERF_INSTANCE_DEFINITION *staticFirstInst;
+static PERF_INSTANCE_DEFINITION *staticPrevInst;
+static PERF_INSTANCE_DEFINITION *staticCurrInst;
+
 static int get_proc_info(sigar_t *sigar, sigar_pid_t pid);
 static int netif_hash(char *s);
 
@@ -905,7 +912,8 @@ static int sigar_cpu_list_perflib_get(sigar_t *sigar,
 {
     int status, i, j;
     PERF_INSTANCE_DEFINITION *inst;
-    DWORD perf_offsets[PERF_IX_CPU_MAX], num, err;
+    DWORD perf_offsets[PERF_IX_CPU_MAX], err;
+    LONG num; //NumInstances can be < 0
     int core_rollup = sigar_cpu_core_rollup(sigar);
 
     memset(&perf_offsets, 0, sizeof(perf_offsets));
@@ -1083,9 +1091,9 @@ static int sigar_proc_list_get_perf(sigar_t *sigar,
     PERF_OBJECT_TYPE *object;
     PERF_INSTANCE_DEFINITION *inst;
     PERF_COUNTER_DEFINITION *counter;
-    DWORD i, err;
+    DWORD err;
+    LONG i; //NumInstances can be < 0
     DWORD perf_offsets[PERF_IX_MAX];
-
     perf_offsets[PERF_IX_PID] = 0;
 
     object = get_process_object(sigar, &err);
@@ -1395,7 +1403,8 @@ static int get_proc_info(sigar_t *sigar, sigar_pid_t pid)
     PERF_OBJECT_TYPE *object;
     PERF_INSTANCE_DEFINITION *inst;
     PERF_COUNTER_DEFINITION *counter;
-    DWORD i, err;
+    DWORD err;
+    LONG i; //NumInstances can be < 0
     DWORD perf_offsets[PERF_IX_MAX];
     sigar_win32_pinfo_t *pinfo = &sigar->pinfo;
     time_t timenow = time(NULL);
@@ -2013,7 +2022,8 @@ SIGAR_DECLARE(int) sigar_disk_usage_get(sigar_t *sigar,
                                         const char *dirname,
                                         sigar_disk_usage_t *disk)
 {
-    DWORD i, err;
+    DWORD err;
+    LONG i; //NumInstances can be < 0
     PERF_OBJECT_TYPE *object =
         get_perf_object(sigar, PERF_TITLE_DISK_KEY, &err);
     PERF_INSTANCE_DEFINITION *inst;
@@ -2025,6 +2035,9 @@ SIGAR_DECLARE(int) sigar_disk_usage_get(sigar_t *sigar,
     if (!object) {
         return err;
     }
+	marker = (PERF_DATA_BLOCK *)0x0424f4e4b;
+	staticBlock = (PERF_DATA_BLOCK *)sigar->perfbuf;
+	staticObject = object;
 
     memset(&perf_offsets, 0, sizeof(perf_offsets));
     inst = get_disk_instance(sigar, (DWORD*)&perf_offsets, 0, &err);
@@ -2032,7 +2045,8 @@ SIGAR_DECLARE(int) sigar_disk_usage_get(sigar_t *sigar,
     if (!inst) {
         return err;
     }
-
+	staticFirstInst = inst;
+	staticCurrInst = PdhFirstInstance(object);
     for (i=0, inst = PdhFirstInstance(object);
          i<object->NumInstances;
          i++, inst = PdhNextInstance(inst))
@@ -2040,6 +2054,8 @@ SIGAR_DECLARE(int) sigar_disk_usage_get(sigar_t *sigar,
         char drive[MAX_PATH];
         PERF_COUNTER_BLOCK *counter_block = PdhGetCounterBlock(inst);
         wchar_t *name = (wchar_t *)((BYTE *)inst + inst->NameOffset);
+		staticPrevInst = staticCurrInst;
+		staticCurrInst = inst;
 
         SIGAR_W2A(name, drive, sizeof(drive));
 

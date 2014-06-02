@@ -124,13 +124,15 @@ int sigar_user_id_get(sigar_t *sigar, const char *name, int *uid)
 
 #endif /* WIN32 */
 
-static char *sigar_error_string(int err)
+static char *sigar_error_string(int err, char *errbuf, int buflen)
 {
     switch (err) {
       case SIGAR_ENOTIMPL:
-        return "This function has not been implemented on this platform";
+        SIGAR_STRNCPY(errbuf, "This function has not been implemented on this platform", buflen);
+        return errbuf;
       default:
-        return "Error string not specified yet";
+        SIGAR_STRNCPY(errbuf, "Error string not specified yet", buflen);
+        return errbuf;
     }
 }
 
@@ -146,11 +148,13 @@ SIGAR_DECLARE(char *) sigar_strerror(sigar_t *sigar, int err)
         if ((buf = sigar_os_error_string(sigar, err)) != NULL) {
             return buf;
         }
-        return "Unknown OS Error"; /* should never happen */
+        SIGAR_STRNCPY(sigar->errbuf, "Unknown OS Error", sizeof(sigar->errbuf));  /* should never happen */
+        //return "Unknown OS Error"; /* should never happen */
+		return sigar->errbuf;
     }
 
     if (err > SIGAR_START_ERROR) {
-        return sigar_error_string(err);
+        return sigar_error_string(err, sigar->errbuf, sizeof(sigar->errbuf));
     }
 
     return sigar_strerror_get(err, sigar->errbuf, sizeof(sigar->errbuf));
@@ -158,10 +162,12 @@ SIGAR_DECLARE(char *) sigar_strerror(sigar_t *sigar, int err)
 
 char *sigar_strerror_get(int err, char *errbuf, int buflen)
 {
-    char *buf = NULL;
 #ifdef WIN32
     DWORD len;
-
+#endif
+	char *buf = NULL;
+	strcpy(errbuf, "???");
+#ifdef WIN32
     len = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM |
                         FORMAT_MESSAGE_IGNORE_INSERTS,
                         NULL,
@@ -406,21 +412,21 @@ SIGAR_DECLARE(int) sigar_net_address_to_string(sigar_t *sigar,
     }
 }
 
-SIGAR_DECLARE(const char *)sigar_net_scope_to_string(int type)
+SIGAR_DECLARE(const char *)sigar_net_scope_to_string(int type, char* buf)
 {
     switch (type) {
     case SIGAR_IPV6_ADDR_ANY:
-        return "Global";
+        strcpy(buf, "Global");
     case SIGAR_IPV6_ADDR_LOOPBACK:
-        return "Host";
+        strcpy(buf, "Host");
     case SIGAR_IPV6_ADDR_LINKLOCAL:
-        return "Link";
+        strcpy(buf, "Link");
     case SIGAR_IPV6_ADDR_SITELOCAL:
-        return "Site";
+        strcpy(buf, "Site");
     case SIGAR_IPV6_ADDR_COMPATv4:
-        return "Compat";
+        strcpy(buf, "Compat");
     default:
-        return "Unknown";
+        strcpy(buf, "Unknown");
     }
 }
 
@@ -462,54 +468,54 @@ SIGAR_DECLARE(sigar_uint32_t) sigar_net_address_hash(sigar_net_address_t *addres
     return hash;
 }
 
-SIGAR_DECLARE(const char *)sigar_net_connection_type_get(int type)
+SIGAR_DECLARE(const char *)sigar_net_connection_type_get(int type, char *buf)
 {
     switch (type) {
       case SIGAR_NETCONN_TCP:
-        return "tcp";
+        strcpy(buf, "tcp");
       case SIGAR_NETCONN_UDP:
-        return "udp";
+        strcpy(buf, "udp");
       case SIGAR_NETCONN_RAW:
-        return "raw";
+        strcpy(buf, "raw");
       case SIGAR_NETCONN_UNIX:
-        return "unix";
+        strcpy(buf, "unix");
       default:
-        return "unknown";
+        strcpy(buf, "unknown");
     }
 }
 
-SIGAR_DECLARE(const char *)sigar_net_connection_state_get(int state)
+SIGAR_DECLARE(const char *)sigar_net_connection_state_get(int state, char *buf)
 {
     switch (state) {
       case SIGAR_TCP_ESTABLISHED:
-        return "ESTABLISHED";
+        strcpy(buf, "ESTABLISHED");
       case SIGAR_TCP_SYN_SENT:
-        return "SYN_SENT";
+        strcpy(buf, "SYN_SENT");
       case SIGAR_TCP_SYN_RECV:
-        return "SYN_RECV";
+        strcpy(buf, "SYN_RECV");
       case SIGAR_TCP_FIN_WAIT1:
-        return "FIN_WAIT1";
+        strcpy(buf, "FIN_WAIT1");
       case SIGAR_TCP_FIN_WAIT2:
-        return "FIN_WAIT2";
+        strcpy(buf, "FIN_WAIT2");
       case SIGAR_TCP_TIME_WAIT:
-        return "TIME_WAIT";
+        strcpy(buf, "TIME_WAIT");
       case SIGAR_TCP_CLOSE:
-        return "CLOSE";
+        strcpy(buf, "CLOSE");
       case SIGAR_TCP_CLOSE_WAIT:
-        return "CLOSE_WAIT";
+        strcpy(buf, "CLOSE_WAIT");
       case SIGAR_TCP_LAST_ACK:
-        return "LAST_ACK";
+        strcpy(buf, "LAST_ACK");
       case SIGAR_TCP_LISTEN:
-        return "LISTEN";
+        strcpy(buf, "LISTEN");
       case SIGAR_TCP_CLOSING:
-        return "CLOSING";
+        strcpy(buf, "CLOSING");
       case SIGAR_TCP_IDLE:
-        return "IDLE";
+        strcpy(buf, "IDLE");
       case SIGAR_TCP_BOUND:
-        return "BOUND";
+        strcpy(buf, "BOUND");
       case SIGAR_TCP_UNKNOWN:
       default:
-        return "UNKNOWN";
+        strcpy(buf, "UNKNOWN");
     }
 }
 
