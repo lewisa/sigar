@@ -137,6 +137,10 @@ static PERF_OBJECT_TYPE *staticObject;
 static PERF_INSTANCE_DEFINITION *staticFirstInst;
 static PERF_INSTANCE_DEFINITION *staticPrevInst;
 static PERF_INSTANCE_DEFINITION *staticCurrInst;
+static PERF_DATA_BLOCK *marker2;
+static DWORD staticPosn;
+static char* staticChars;
+static sigar_net_interface_config_t *staticIFConfig;
 
 static int get_proc_info(sigar_t *sigar, sigar_pid_t pid);
 static int netif_hash(char *s);
@@ -2897,15 +2901,23 @@ sigar_net_interface_config_get(sigar_t *sigar,
     MIB_IFROW *ifr;
     MIB_IPADDRROW *ipaddr;
     int status;
+	marker2 = (PERF_DATA_BLOCK *)0x0042414e4b;
+	staticPosn = 0x00114e4b;
+	staticChars = name;
+	staticIFConfig = ifconfig;
 
     if (!name) {
+	staticPosn = 0x00224e4b;
         return sigar_net_interface_config_primary_get(sigar, ifconfig);
     }
 
+	staticPosn = 0x00334e4b;
     status = get_mib_ifrow(sigar, name, &ifr);
     if (status != SIGAR_OK) {
+	staticPosn = 0x00444e4b;
         return status;
     }
+	staticPosn = 0x00554e4b;
 
     SIGAR_ZERO(ifconfig);
 
@@ -2923,6 +2935,7 @@ sigar_net_interface_config_get(sigar_t *sigar,
     if (ifr->dwOperStatus & MIB_IF_OPER_STATUS_OPERATIONAL) {
         ifconfig->flags |= SIGAR_IFF_UP|SIGAR_IFF_RUNNING;
     }
+	staticPosn = 0x00664e4b;
 
     status = sigar_get_netif_ipaddr(sigar,
                                     ifr->dwIndex,
@@ -2948,6 +2961,7 @@ sigar_net_interface_config_get(sigar_t *sigar,
             }
         }
     }
+	staticPosn = 0x00774e4b;
 
     /* hack for MS_LOOPBACK_ADAPTER */
     if (strnEQ(name, NETIF_LA, sizeof(NETIF_LA)-1)) {
@@ -2968,9 +2982,11 @@ sigar_net_interface_config_get(sigar_t *sigar,
         SIGAR_SSTRCPY(ifconfig->type,
                       SIGAR_NIC_ETHERNET);
     }
+	staticPosn = 0x00884e4b;
 
     sigar_net_interface_ipv6_config_init(ifconfig);
     sigar_net_interface_ipv6_config_find(sigar, ifr->dwIndex, ifconfig);
+	staticPosn = 0x00994e4b;
 
     return SIGAR_OK;
 }

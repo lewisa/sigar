@@ -901,7 +901,8 @@ JNIEXPORT jstring SIGAR_JNI(NetFlags_getIfFlagsString)
 JNIEXPORT jstring SIGAR_JNI(NetFlags_getScopeString)
 (JNIEnv *env, jclass cls, jint scope)
 {
-    const char *buf = sigar_net_scope_to_string(scope);
+	char buf[24];
+    sigar_net_scope_to_string(scope, buf, 24);
     return JENV->NewStringUTF(env, buf);
 }
 
@@ -1054,18 +1055,20 @@ JNIEXPORT jstring SIGAR_JNIx(getNetServicesName)
 JNIEXPORT jstring SIGAR_JNI(NetConnection_getTypeString)
 (JNIEnv *env, jobject obj)
 {
+	char buf[24];
     jclass cls = JENV->GetObjectClass(env, obj);
     jfieldID field = JENV->GetFieldID(env, cls, "type", "I");
     jint type = JENV->GetIntField(env, obj, field);
-    return JENV->NewStringUTF(env,
-                              sigar_net_connection_type_get(type));
+	sigar_net_connection_type_get(type, buf);
+    return JENV->NewStringUTF(env, buf);
 }
 
 JNIEXPORT jstring SIGAR_JNI(NetConnection_getStateString)
 (JNIEnv *env, jobject cls, jint state)
 {
-    return JENV->NewStringUTF(env,
-                              sigar_net_connection_state_get(state));
+	char buf[24];
+	sigar_net_connection_state_get(state, buf);
+    return JENV->NewStringUTF(env, buf);
 }
 
 JNIEXPORT jobjectArray SIGAR_JNIx(getArpList)
@@ -1217,7 +1220,8 @@ JNIEXPORT jobjectArray SIGAR_JNIx(getNetInterfaceList)
     dSIGAR(NULL);
 
     if ((status = sigar_net_interface_list_get(sigar, &iflist)) != SIGAR_OK) {
-        sigar_throw_error(env, jsigar, status);
+		sigar_net_interface_list_destroy(sigar, &iflist);
+		sigar_throw_error(env, jsigar, status);
         return NULL;
     }
 
@@ -1226,8 +1230,17 @@ JNIEXPORT jobjectArray SIGAR_JNIx(getNetInterfaceList)
 
     for (i=0; i<iflist.number; i++) {
         jstring s = JENV->NewStringUTF(env, iflist.data[i]);
+		if (s == NULL) {
+			sigar_net_interface_list_destroy(sigar, &iflist);
+			sigar_throw_error(env, jsigar, SIGAR_ENOTIMPL);
+			return NULL;
+		}
         JENV->SetObjectArrayElement(env, ifarray, i, s);
-        SIGAR_CHEX;
+		if (JENV->ExceptionCheck(env)) {
+			sigar_net_interface_list_destroy(sigar, &iflist);
+			sigar_throw_error(env, jsigar, SIGAR_ENOTIMPL);
+			return NULL;
+		}
     }
 
     sigar_net_interface_list_destroy(sigar, &iflist);

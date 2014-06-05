@@ -412,21 +412,21 @@ SIGAR_DECLARE(int) sigar_net_address_to_string(sigar_t *sigar,
     }
 }
 
-SIGAR_DECLARE(const char *)sigar_net_scope_to_string(int type, char* buf)
+SIGAR_DECLARE(void)sigar_net_scope_to_string(int type, char* buf, int len)
 {
     switch (type) {
     case SIGAR_IPV6_ADDR_ANY:
-        strcpy(buf, "Global");
+        strncpy(buf, "Global", len);
     case SIGAR_IPV6_ADDR_LOOPBACK:
-        strcpy(buf, "Host");
+        strncpy(buf, "Host", len);
     case SIGAR_IPV6_ADDR_LINKLOCAL:
-        strcpy(buf, "Link");
+        strncpy(buf, "Link", len);
     case SIGAR_IPV6_ADDR_SITELOCAL:
-        strcpy(buf, "Site");
+        strncpy(buf, "Site", len);
     case SIGAR_IPV6_ADDR_COMPATv4:
-        strcpy(buf, "Compat");
+        strncpy(buf, "Compat", len);
     default:
-        strcpy(buf, "Unknown");
+        strncpy(buf, "Unknown", len);
     }
 }
 
@@ -468,7 +468,7 @@ SIGAR_DECLARE(sigar_uint32_t) sigar_net_address_hash(sigar_net_address_t *addres
     return hash;
 }
 
-SIGAR_DECLARE(const char *)sigar_net_connection_type_get(int type, char *buf)
+SIGAR_DECLARE(void)sigar_net_connection_type_get(int type, char *buf)
 {
     switch (type) {
       case SIGAR_NETCONN_TCP:
@@ -484,7 +484,7 @@ SIGAR_DECLARE(const char *)sigar_net_connection_type_get(int type, char *buf)
     }
 }
 
-SIGAR_DECLARE(const char *)sigar_net_connection_state_get(int state, char *buf)
+SIGAR_DECLARE(void)sigar_net_connection_state_get(int state, char *buf)
 {
     switch (state) {
       case SIGAR_TCP_ESTABLISHED:
