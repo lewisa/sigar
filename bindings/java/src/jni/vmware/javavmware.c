@@ -36,6 +36,15 @@
 #define VMWARE_EX_SERVER 1
 #define VMWARE_EX_VM     2
 
+
+static void vmw_throw_exception(JNIEnv *env, char *msg)
+{
+    jclass errorClass = VMWARE_FIND_CLASS("VMwareException");
+
+    JENV->ThrowNew(env, errorClass, msg);
+}
+#define VMW_CHECK_NULLSTRING(ptr, text, rtn) if (ptr == NULL) { vmw_throw_exception(env, text); return rtn; }
+
 static void vmware_throw_last_error(JNIEnv *env, void *ptr, int type)
 {
     jclass errorClass = VMWARE_FIND_CLASS("VMwareException");
@@ -209,11 +218,12 @@ JNIEXPORT jboolean VMWARE_JNI(VMwareServer_isRegistered)
 (JNIEnv *env, jclass obj, jstring jconfig)
 {
     dSERVER(obj);
-    const char *config =
-        JENV->GetStringUTFChars(env, jconfig, NULL);
+    const char *config;
     Bool value;
-    Bool retval =
-        VMControl_ServerIsRegistered(server, config, &value);
+    Bool retval;
+	VMW_CHECK_NULLSTRING(jconfig, "NULL VMwareServer_isRegistered jconfig", JNI_FALSE)
+	config = JENV->GetStringUTFChars(env, jconfig, NULL);
+    retval = VMControl_ServerIsRegistered(server, config, &value);
 
     JENV->ReleaseStringUTFChars(env, jconfig, config);
 
@@ -264,10 +274,13 @@ JNIEXPORT jstring VMWARE_JNI(VMwareServer_getResource)
 {
     dSERVER(obj);
     jstring retval;
-    const char *key =
-        JENV->GetStringUTFChars(env, jkey, NULL);
-    char *value = 
-        VMControl_ServerGetResource(server, (char *)key);
+    const char *key;
+    char *value;
+
+	VMW_CHECK_NULLSTRING(jkey, "NULL VMwareServer_getResource jkey", NULL)
+	key = JENV->GetStringUTFChars(env, jkey, NULL);
+    value = VMControl_ServerGetResource(server, (char *)key);
+
 
     JENV->ReleaseStringUTFChars(env, jkey, key);
 
@@ -286,10 +299,12 @@ JNIEXPORT jstring VMWARE_JNI(VMwareServer_exec)
 {
     dSERVER(obj);
     jstring retval;
-    const char *xml =
-        JENV->GetStringUTFChars(env, jxml, NULL);
-    char *value = 
-        VMControl_ServerExec(server, xml);
+    const char *xml;
+    char *value;
+
+	VMW_CHECK_NULLSTRING(jxml, "NULL VMwareServer_exec jxml", NULL)
+    xml = JENV->GetStringUTFChars(env, jxml, NULL);
+    value = VMControl_ServerExec(server, xml);
 
     JENV->ReleaseStringUTFChars(env, jxml, xml);
 
@@ -336,11 +351,13 @@ JNIEXPORT void VMWARE_JNI(VM_connect)
 {
     dVM(obj);
     dPARAMS(params_obj);
-    const char *config =
-        JENV->GetStringUTFChars(env, jconfig, NULL);    
+    const char *config;    
+    Bool retval;
 
-    Bool retval =
-        VMControl_VMConnectEx(vm, params, config, mks);
+	VMW_CHECK_NULLSTRING(jconfig, "NULL VM_connect jconfig", )
+
+    config = JENV->GetStringUTFChars(env, jconfig, NULL);    
+    retval = VMControl_VMConnectEx(vm, params, config, mks);
 
     JENV->ReleaseStringUTFChars(env, jconfig, config);
 
@@ -455,10 +472,14 @@ JNIEXPORT jstring VMWARE_JNI(VM_getConfig)
 {
     dVM(obj);
     jstring retval;
-    const char *key =
-        JENV->GetStringUTFChars(env, jkey, NULL);
-    char *value = 
-        VMControl_VMGetConfig(vm, (char *)key);
+    const char *key;
+    char *value;
+
+	VMW_CHECK_NULLSTRING(jkey, "NULL VM_getConfig jkey", NULL)
+
+	key = JENV->GetStringUTFChars(env, jkey, NULL);
+    value = VMControl_VMGetConfig(vm, (char *)key);
+
 
     JENV->ReleaseStringUTFChars(env, jkey, key);
 
@@ -477,10 +498,14 @@ JNIEXPORT void VMWARE_JNI(VM_setConfig)
 {
     dVM(obj);
     jboolean retval;
-    const char *key =
-        JENV->GetStringUTFChars(env, jkey, NULL);
-    const char *value =
-        JENV->GetStringUTFChars(env, jvalue, NULL);
+    const char *key;
+    const char *value;
+
+	VMW_CHECK_NULLSTRING(jkey, "NULL VM_setConfig jkey", )
+	VMW_CHECK_NULLSTRING(jvalue, "NULL VM_setConfig jvalue", )
+
+    key = JENV->GetStringUTFChars(env, jkey, NULL);
+    value = JENV->GetStringUTFChars(env, jvalue, NULL);
 
     retval = VMControl_VMSetConfig(vm, (char *)key, (char *)value);
 
@@ -497,10 +522,13 @@ JNIEXPORT jstring VMWARE_JNI(VM_getResource)
 {
     dVM(obj);
     jstring retval;
-    const char *key =
-        JENV->GetStringUTFChars(env, jkey, NULL);
-    char *value = 
-        VMControl_VMGetResource(vm, (char *)key);
+    const char *key;
+    char *value;
+
+	VMW_CHECK_NULLSTRING(jkey, "NULL VM_getResource jkey", NULL)
+
+    key = JENV->GetStringUTFChars(env, jkey, NULL);
+    value = VMControl_VMGetResource(vm, (char *)key);
 
     JENV->ReleaseStringUTFChars(env, jkey, key);
 
@@ -519,10 +547,13 @@ JNIEXPORT jstring VMWARE_JNI(VM_getGuestInfo)
 {
     dVM(obj);
     jstring retval;
-    const char *key =
-        JENV->GetStringUTFChars(env, jkey, NULL);
-    char *value = 
-        VMControl_VMGetGuestInfo(vm, (char *)key);
+    const char *key;
+    char *value;
+
+	VMW_CHECK_NULLSTRING(jkey, "NULL VM_getGuestInfo jkey", NULL)
+
+    key = JENV->GetStringUTFChars(env, jkey, NULL);
+    value = VMControl_VMGetGuestInfo(vm, (char *)key);
 
     JENV->ReleaseStringUTFChars(env, jkey, key);
 
@@ -541,10 +572,14 @@ JNIEXPORT void VMWARE_JNI(VM_setGuestInfo)
 {
     dVM(obj);
     jboolean retval;
-    const char *key =
-        JENV->GetStringUTFChars(env, jkey, NULL);
-    const char *value =
-        JENV->GetStringUTFChars(env, jvalue, NULL);
+    const char *key;
+    const char *value;
+
+	VMW_CHECK_NULLSTRING(jkey, "NULL VM_setGuestInfo jkey", )
+	VMW_CHECK_NULLSTRING(jvalue, "NULL VM_setGuestInfo jvalue", )
+
+	key = JENV->GetStringUTFChars(env, jkey, NULL);
+    value = JENV->GetStringUTFChars(env, jvalue, NULL);
 
     retval = VMControl_VMSetGuestInfo(vm, (char *)key, (char *)value);
 
@@ -616,10 +651,14 @@ JNIEXPORT void VMWARE_JNI(VM_createNamedSnapshot)
  jboolean quiesce, jboolean memory)
 {
     dVM(obj);
-    const char *name =
-        JENV->GetStringUTFChars(env, jname, NULL);
-    const char *descr =
-        JENV->GetStringUTFChars(env, jdescr, NULL);
+    const char *name;
+    const char *descr;
+
+	VMW_CHECK_NULLSTRING(jname, "NULL VM_createNamedSnapshot jname", )
+	VMW_CHECK_NULLSTRING(jdescr, "NULL VM_createNamedSnapshot jdescr", )
+
+    name = JENV->GetStringUTFChars(env, jname, NULL);
+    descr = JENV->GetStringUTFChars(env, jdescr, NULL);
 
     if (!VMControl_VMCreateSnapshot(vm, name, descr, quiesce, memory)) {
         vmware_throw_last_vm_error();
@@ -711,8 +750,11 @@ JNIEXPORT void VMWARE_JNI(VM_saveScreenshot)
 {
     dVM(obj);
     jboolean retval;
-    const char *name =
-        JENV->GetStringUTFChars(env, jname, NULL);
+    const char *name;
+
+    VMW_CHECK_NULLSTRING(jname, "NULL VM_saveScreenshot jname", )
+
+    name = JENV->GetStringUTFChars(env, jname, NULL);
 
     retval = VMControl_MKSSaveScreenshot(vm, name, "PNG");
 
@@ -727,10 +769,13 @@ JNIEXPORT void VMWARE_JNI(VM_deviceConnect)
 (JNIEnv *env, jclass obj, jstring jdevice)
 {
     dVM(obj);
-    const char *device =
-        JENV->GetStringUTFChars(env, jdevice, NULL);
-    jboolean retval =
-        VMControl_VMDeviceConnect(vm, device);
+    const char *device;
+    jboolean retval;
+
+    VMW_CHECK_NULLSTRING(jdevice, "NULL VM_deviceConnect jdevice", )
+
+    device = JENV->GetStringUTFChars(env, jdevice, NULL);
+    retval = VMControl_VMDeviceConnect(vm, device);
 
     JENV->ReleaseStringUTFChars(env, jdevice, device);
 
@@ -743,10 +788,13 @@ JNIEXPORT void VMWARE_JNI(VM_deviceDisconnect)
 (JNIEnv *env, jclass obj, jstring jdevice)
 {
     dVM(obj);
-    const char *device =
-        JENV->GetStringUTFChars(env, jdevice, NULL);
-    jboolean retval =
-        VMControl_VMDeviceDisconnect(vm, device);
+    const char *device;
+    jboolean retval;
+
+    VMW_CHECK_NULLSTRING(jdevice, "NULL VM_deviceDisconnect jdevice", )
+
+    device = JENV->GetStringUTFChars(env, jdevice, NULL);
+    retval = VMControl_VMDeviceDisconnect(vm, device);
 
     JENV->ReleaseStringUTFChars(env, jdevice, device);
 
@@ -759,12 +807,14 @@ JNIEXPORT jboolean VMWARE_JNI(VM_deviceIsConnected)
 (JNIEnv *env, jclass obj, jstring jdevice)
 {
     dVM(obj);
-    const char *device =
-        JENV->GetStringUTFChars(env, jdevice, NULL);
+    const char *device;
     Bool isConnected;
-    Bool retval =
-        VMControl_VMDeviceIsConnected(vm, device,
-                                      &isConnected);
+    Bool retval;
+
+    VMW_CHECK_NULLSTRING(jdevice, "NULL VM_deviceIsConnected jdevice", JNI_FALSE)
+
+    device = JENV->GetStringUTFChars(env, jdevice, NULL);
+    retval = VMControl_VMDeviceIsConnected(vm, device, &isConnected);
 
     JENV->ReleaseStringUTFChars(env, jdevice, device);
 

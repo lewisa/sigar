@@ -35,6 +35,8 @@
 /* CHeck EXception */
 #define SIGAR_CHEX if (JENV->ExceptionCheck(env)) return NULL
 
+#define SIGAR_CHECK_NULLSTRING(ptr, text, rtn) if (ptr == NULL) { sigar_throw_exception(env, text); return rtn; }
+
 typedef struct {
     JNIEnv *env;
     jobject obj;
@@ -44,6 +46,8 @@ typedef struct {
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+static void sigar_throw_exception(JNIEnv *env, char *msg);
 
 int jsigar_list_init(JNIEnv *env, jsigar_list_t *obj);
 
