@@ -83,6 +83,7 @@ typedef struct {
     sigar = jsigar->sigar; \
     jsigar->env = env
 
+
 JNIEXPORT jint JNICALL
 JNI_OnLoad(JavaVM *vm, void *reserved)
 {
@@ -187,12 +188,17 @@ static void *sigar_get_pointer(JNIEnv *env, jobject obj) {
     jfieldID pointer_field;
     jclass cls = JENV->GetObjectClass(env, obj);
 
+//#if 1
 #ifdef SIGAR_POINTER_LONG
     pointer_field = JENV->GetFieldID(env, cls, "longSigarWrapper", "J");
     return (void *)JENV->GetLongField(env, obj, pointer_field);
+#pragma message ( "Using SIGAR_POINTER_LONG" )
+//#warning "Using SIGAR_POINTER_LONG"
 #else
     pointer_field = JENV->GetFieldID(env, cls, "sigarWrapper", "I");
     return (void *)JENV->GetIntField(env, obj, pointer_field);
+#pragma message ( "NOT Using SIGAR_POINTER_LONG" )
+//#warning "NOT Using SIGAR_POINTER_LONG"
 #endif
 }
 
@@ -372,7 +378,7 @@ JNIEXPORT jint SIGAR_JNIx(getSigNum)
     jboolean is_copy;
     const char *name;
     int num;
-
+    SIGAR_CHECK_NULLSTRING(jname, "NULL getSigNum jname", 0)
     name = JENV->GetStringUTFChars(env, jname, &is_copy);
 
     num = sigar_signum_get((char *)name);
@@ -520,6 +526,7 @@ JNIEXPORT jint SIGAR_JNI(RPC_ping)
         return 13; /* RPC_UNKNOWNHOST */
     }
 
+    SIGAR_CHECK_NULLSTRING(jhostname, "NULL RPC_ping jhostname", 0)
     hostname = JENV->GetStringUTFChars(env, jhostname, &is_copy);
 
     status =
@@ -666,6 +673,17 @@ JNIEXPORT jlongArray SIGAR_JNIx(getProcList)
 
     return procarray;
 }
+jstring getProcArgStr(char *arg, JNIEnv *env) {
+   jstring s;
+#ifdef WIN32
+   WCHAR warg[3000];
+   SIGAR_A2W(arg, warg, sizeof(warg));		
+   s = JENV->NewString(env,  (const jchar *)warg, wcslen(warg));		
+#else
+   s = JENV->NewStringUTF(env, arg);
+#endif
+return s;
+}
 
 JNIEXPORT jobjectArray SIGAR_JNIx(getProcArgs)
 (JNIEnv *env, jobject sigar_obj, jlong pid)
@@ -685,8 +703,9 @@ JNIEXPORT jobjectArray SIGAR_JNIx(getProcArgs)
     argsarray = JENV->NewObjectArray(env, procargs.number, stringclass, 0);
     SIGAR_CHEX;
 
-    for (i=0; i<procargs.number; i++) {
-        jstring s = JENV->NewStringUTF(env, procargs.data[i]);
+    for (i=0; i<procargs.number; i++) {	
+		
+		jstring s = getProcArgStr(procargs.data[i], env);
         JENV->SetObjectArrayElement(env, argsarray, i, s);
         SIGAR_CHEX;
     }
@@ -789,6 +808,7 @@ JNIEXPORT jstring SIGAR_JNI(ProcEnv_getValue)
     dSIGAR(NULL);
 
     get.env = env;
+    SIGAR_CHECK_NULLSTRING(key, "NULL ProcEnv_getValue key", NULL)
     get.key = JENV->GetStringUTFChars(env, key, 0);
     get.klen = JENV->GetStringUTFLength(env, key);
     get.val = NULL;
@@ -1058,14 +1078,13 @@ JNIEXPORT jstring SIGAR_JNI(NetConnection_getTypeString)
     jfieldID field = JENV->GetFieldID(env, cls, "type", "I");
     jint type = JENV->GetIntField(env, obj, field);
     return JENV->NewStringUTF(env,
-                              sigar_net_connection_type_get(type));
+        sigar_net_connection_type_get(type));    
 }
 
 JNIEXPORT jstring SIGAR_JNI(NetConnection_getStateString)
 (JNIEnv *env, jobject cls, jint state)
 {
-    return JENV->NewStringUTF(env,
-                              sigar_net_connection_state_get(state));
+    return JENV->NewStringUTF(env, sigar_net_connection_state_get(state));
 }
 
 JNIEXPORT jobjectArray SIGAR_JNIx(getArpList)
@@ -1173,6 +1192,7 @@ JNIEXPORT void SIGAR_JNI(FileInfo_gatherLink)
     const char *utf;
     dSIGAR_VOID;
 
+    SIGAR_CHECK_NULLSTRING(name, "NULL FileInfo_gatherLink name", )
     utf = JENV->GetStringUTFChars(env, name, 0);
 
     status = sigar_link_attrs_get(sigar, utf, &s);
@@ -1246,6 +1266,7 @@ JNIEXPORT jstring SIGAR_JNIx(getPasswordNative)
         return NULL;
     }
 
+    SIGAR_CHECK_NULLSTRING(prompt, "NULL getPasswordNative prompt", NULL)
     prompt_str = JENV->GetStringUTFChars(env, prompt, 0);
 
     password = sigar_password_get(prompt_str);
@@ -1336,17 +1357,29 @@ JNIEXPORT void SIGAR_JNI(ptql_SigarProcessQuery_create)
 (JNIEnv *env, jobject obj, jstring jptql)
 {
     int status;
-    jboolean is_copy;
-    const char *ptql;
+    jboolean is_copy;    
     sigar_ptql_query_t *query;
     sigar_ptql_error_t error;
-
-    ptql = JENV->GetStringUTFChars(env, jptql, &is_copy);
+#ifdef WIN32	
+    LPCTSTR ptql;
+    char ptql_ch[3000];   
+    SIGAR_CHECK_NULLSTRING(jptql, "NULL ptql_SigarProcessQuery_create jptql", )
+    ptql = (LPCTSTR)JENV->GetStringChars(env, jptql, &is_copy);       
+		 
+    SIGAR_W2A((LPCWSTR)ptql, ptql_ch, sizeof(ptql_ch));  
+    status = sigar_ptql_query_create(&query, ptql_ch, &error);
+    if (is_copy) {
+        JENV->ReleaseStringChars(env, jptql,  (const jchar *)ptql);
+    }
+#else
+    const char *ptql;
+    SIGAR_CHECK_NULLSTRING(jptql, "NULL ptql_SigarProcessQuery_create jptql", )
+	ptql = JENV->GetStringUTFChars(env, jptql, &is_copy);
     status = sigar_ptql_query_create(&query, (char *)ptql, &error);
     if (is_copy) {
         JENV->ReleaseStringUTFChars(env, jptql, ptql);
     }
-
+#endif
     if (status != SIGAR_OK) {
         sigar_throw_ptql_malformed(env, error.message);
     }
@@ -1462,6 +1495,7 @@ JNIEXPORT jstring SIGAR_JNI(util_Getline_getline)
     char *line;
     jboolean is_copy;
 
+    SIGAR_CHECK_NULLSTRING(prompt, "NULL util_Getline_getline prompt", NULL)
     prompt_str = JENV->GetStringUTFChars(env, prompt, &is_copy);
 
     line = sigar_getline((char *)prompt_str);
@@ -1487,6 +1521,7 @@ JNIEXPORT void SIGAR_JNI(util_Getline_histadd)
     const char *hist_str;
     jboolean is_copy;
 
+    SIGAR_CHECK_NULLSTRING(hist, "NULL util_Getline_histadd hist", )
     hist_str = JENV->GetStringUTFChars(env, hist, &is_copy);
 
     sigar_getline_histadd((char *)hist_str);
@@ -1502,6 +1537,7 @@ JNIEXPORT void SIGAR_JNI(util_Getline_histinit)
     const char *hist_str;
     jboolean is_copy;
 
+    SIGAR_CHECK_NULLSTRING(hist, "NULL util_Getline_histinit hist", )
     hist_str = JENV->GetStringUTFChars(env, hist, &is_copy);
 
     sigar_getline_histinit((char *)hist_str);
@@ -1542,6 +1578,7 @@ static int jsigar_getline_completer(char *buffer, int offset, int *pos)
         return 0;
     }
 
+    SIGAR_CHECK_NULLSTRING(completion, "NULL jsigar_getline_completer completion", 0)
     line = JENV->GetStringUTFChars(env, completion, &is_copy);
     len = JENV->GetStringUTFLength(env, completion);
 
@@ -1662,6 +1699,7 @@ JNIEXPORT jlong SIGAR_JNIx(getServicePid)
     int status;
     dSIGAR(0);
 
+    SIGAR_CHECK_NULLSTRING(jname, "NULL getServicePid jname", 0)
     name = JENV->GetStringUTFChars(env, jname, &is_copy);
 
     status =
@@ -1704,6 +1742,7 @@ JNIEXPORT jstring SIGAR_JNI(win32_Win32_findExecutable)
     LONG result;
     jstring jexe = NULL;
 
+    SIGAR_CHECK_NULLSTRING(jname, "NULL win32_Win32_findExecutable jname", 0)
     name = JENV->GetStringUTFChars(env, jname, &is_copy);
 
     if ((result = (LONG)FindExecutable(name, ".", exe)) > 32) {
@@ -1730,10 +1769,12 @@ JNIEXPORT jboolean SIGAR_JNI(win32_FileVersion_gather)
     jboolean is_copy;
     jfieldID id;
     jclass cls = JENV->GetObjectClass(env, obj);
-    const char *name = JENV->GetStringUTFChars(env, jname, &is_copy);
+    const char *name;
     sigar_proc_env_t infocb;
     jobject hashmap;
     jni_env_put_t put;
+    SIGAR_CHECK_NULLSTRING(jname, "NULL win32_FileVersion_gather jname", JNI_FALSE)
+    name = JENV->GetStringUTFChars(env, jname, &is_copy);
 
     id = JENV->GetFieldID(env, cls, "string_file_info",
                           "Ljava/util/Map;");

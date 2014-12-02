@@ -905,7 +905,8 @@ static int sigar_cpu_list_perflib_get(sigar_t *sigar,
 {
     int status, i, j;
     PERF_INSTANCE_DEFINITION *inst;
-    DWORD perf_offsets[PERF_IX_CPU_MAX], num, err;
+    DWORD perf_offsets[PERF_IX_CPU_MAX], err;
+    LONG num; //NumInstances can be < 0
     int core_rollup = sigar_cpu_core_rollup(sigar);
 
     memset(&perf_offsets, 0, sizeof(perf_offsets));
@@ -1083,7 +1084,8 @@ static int sigar_proc_list_get_perf(sigar_t *sigar,
     PERF_OBJECT_TYPE *object;
     PERF_INSTANCE_DEFINITION *inst;
     PERF_COUNTER_DEFINITION *counter;
-    DWORD i, err;
+    DWORD err;
+    LONG i; //NumInstances can be < 0
     DWORD perf_offsets[PERF_IX_MAX];
 
     perf_offsets[PERF_IX_PID] = 0;
@@ -1395,7 +1397,8 @@ static int get_proc_info(sigar_t *sigar, sigar_pid_t pid)
     PERF_OBJECT_TYPE *object;
     PERF_INSTANCE_DEFINITION *inst;
     PERF_COUNTER_DEFINITION *counter;
-    DWORD i, err;
+    DWORD err;
+    LONG i; //NumInstances can be < 0
     DWORD perf_offsets[PERF_IX_MAX];
     sigar_win32_pinfo_t *pinfo = &sigar->pinfo;
     time_t timenow = time(NULL);
@@ -2013,7 +2016,8 @@ SIGAR_DECLARE(int) sigar_disk_usage_get(sigar_t *sigar,
                                         const char *dirname,
                                         sigar_disk_usage_t *disk)
 {
-    DWORD i, err;
+    DWORD err;
+    LONG i; //NumInstances can be < 0
     PERF_OBJECT_TYPE *object =
         get_perf_object(sigar, PERF_TITLE_DISK_KEY, &err);
     PERF_INSTANCE_DEFINITION *inst;
@@ -2105,7 +2109,7 @@ sigar_file_system_usage_get(sigar_t *sigar,
 
     status = sigar_disk_usage_get(sigar, dirname, &fsusage->disk);
 
-    return SIGAR_OK;
+    return status;
 }
 
 static int sigar_cpu_info_get(sigar_t *sigar, sigar_cpu_info_t *info)
@@ -2651,14 +2655,12 @@ static int sigar_get_if_table(sigar_t *sigar, PMIB_IFTABLE *iftable)
         return SIGAR_OK;
     }
 }
-
 static int get_mib_ifrow(sigar_t *sigar,
                          const char *name,
                          MIB_IFROW **ifrp)
 {
     int status, key, cached=0;
     sigar_cache_entry_t *entry;
-
     if (sigar->netif_mib_rows) {
         cached = 1;
     }
@@ -2681,7 +2683,6 @@ static int get_mib_ifrow(sigar_t *sigar,
             return status;
         }
     }
-
     return SIGAR_OK;
 }
 
@@ -2965,7 +2966,6 @@ sigar_net_interface_stat_get(sigar_t *sigar, const char *name,
 {
     MIB_IFROW *ifr;
     int status;
-
     status = get_mib_ifrow(sigar, name, &ifr);
     if (status != SIGAR_OK) {
         return status;
