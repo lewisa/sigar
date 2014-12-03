@@ -2109,7 +2109,7 @@ sigar_file_system_usage_get(sigar_t *sigar,
 
     status = sigar_disk_usage_get(sigar, dirname, &fsusage->disk);
 
-    return status;
+    return SIGAR_OK;
 }
 
 static int sigar_cpu_info_get(sigar_t *sigar, sigar_cpu_info_t *info)
