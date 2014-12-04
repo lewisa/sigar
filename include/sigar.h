@@ -29,6 +29,9 @@ extern "C" {
     defined(__LP64__)      || \
     defined(__64BIT__)     || \
     defined(__powerpc64__) || \
+    defined(_M_AMD64)      || \
+    defined(_M_IA64)       || \
+    defined(_M_X64)        || \
     defined(__osf__)
 #define SIGAR_64BIT
 #endif

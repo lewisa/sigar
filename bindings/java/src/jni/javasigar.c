@@ -187,9 +187,11 @@ static void *sigar_get_pointer(JNIEnv *env, jobject obj) {
     jclass cls = JENV->GetObjectClass(env, obj);
 
 #ifdef SIGAR_POINTER_LONG
+    #pragma message ( "Using SIGAR_POINTER_LONG" )
     pointer_field = JENV->GetFieldID(env, cls, "longSigarWrapper", "J");
     return (void *)JENV->GetLongField(env, obj, pointer_field);
 #else
+    #pragma message ( "NOT Using SIGAR_POINTER_LONG" )
     pointer_field = JENV->GetFieldID(env, cls, "sigarWrapper", "I");
     return (void *)JENV->GetIntField(env, obj, pointer_field);
 #endif
