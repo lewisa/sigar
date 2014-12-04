@@ -161,7 +161,9 @@ char *sigar_strerror_get(int err, char *errbuf, int buflen)
     char *buf = NULL;
 #ifdef WIN32
     DWORD len;
-
+#endif
+    strcpy(errbuf, "??? ");
+#ifdef WIN32
     len = FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM |
                         FORMAT_MESSAGE_IGNORE_INSERTS,
                         NULL,
