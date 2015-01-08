@@ -1,0 +1,13 @@
+To compile sigar.dll for windows 64;
+
+1 - check the sigar repository out, switch to branch sigar-1.6-formicary_fixes - is based on Hyperic's branch sigar-1.6
+2 - install VisualStudio, version 2010 works - may need SP1
+3 - install Windows SDK, add the location of rc.exe into PATH, install Perl and ant & add locations to PATH
+4 - start VS2010 x64 AMD command prompt from Visual Studio Tools (ensure choose 64 bit cmd line!!!)
+5 - in the cmd prompt change directory to sigar/bindings/java and run ant - it will pick up the build.xml from the current directory
+6 - built lib will be in sigar/bindings/java/sigar-bin/lib/sigar-amd64-winnt.dll, also sigar-bin/lib/sigar.jar
+
+link errors can be due to pointing to 64-bit JAVA_HOME or using 32-bit version of VS2010 cmd console
+to build for C++ debug info; ant -Djni.debug=true
+To view in VS2010 IDE you'll have to import the source into a VS2010 project, also copy the dll built by ant into into x64/Debug to make debug info available  
+dump lib offsets by; link.exe /dump /exports sigar-amd64-winnt.dll
